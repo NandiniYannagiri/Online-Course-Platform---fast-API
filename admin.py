@@ -6,8 +6,11 @@ from database import get_db
 from models import User
 from security import get_current_user
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+from pwdlib import PasswordHash
+from schemas import UserRegister, UserResponse
 
+router = APIRouter(prefix="/admin", tags=["Admin"])
+password_hash = PasswordHash.recommended()
 
 def get_admin_user(
     current_user: User = Depends(get_current_user)
@@ -71,3 +74,35 @@ def update_user_status(
         "user_id": user.id,
         "is_active": user.is_active
     }
+
+
+@router.post("/instructors", response_model=UserResponse, status_code=201)
+def create_instructor(
+    instructor_data: UserRegister,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    existing_user = (
+        db.query(User)
+        .filter(User.email == instructor_data.email)
+        .first()
+    )
+
+    if existing_user:
+        raise HTTPException(
+            status_code=409,
+            detail="Email is already registered"
+        )
+
+    new_instructor = User(
+        name=instructor_data.name,
+        email=instructor_data.email,
+        hashed_password=password_hash.hash(instructor_data.password),
+        role="instructor"
+    )
+
+    db.add(new_instructor)
+    db.commit()
+    db.refresh(new_instructor)
+
+    return new_instructor
