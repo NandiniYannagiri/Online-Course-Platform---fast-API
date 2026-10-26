@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-from security import get_current_user
+# from security import get_current_user
+from dependencies import get_current_user
 
 from pwdlib import PasswordHash
 from schemas import UserRegister, UserResponse
